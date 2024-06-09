@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Mon 10 Jun 2024 03:15:07 AM IST
+#* Last Modified : Mon 10 Jun 2024 03:54:40 AM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -15,7 +15,7 @@ import functools
 
 import gymnasium
 import numpy as np
-from gymnasium.spaces import Discrete
+from gymnasium.spaces import Discrete, Box
 from pettingzoo import ParallelEnv
 from pettingzoo.utils import parallel_to_aec, wrappers
 
@@ -86,7 +86,7 @@ class parallel_env(ParallelEnv):
 
         These attributes should not be changed after initialization.
         """
-        self.possible_agents = ["player_" + str(r) for r in range(2)]
+        self.possible_agents = ["player_" + str(r) for r in range(5)]
 
         # optional: a mapping between agent name and ID
         self.agent_name_mapping = dict(
@@ -100,7 +100,7 @@ class parallel_env(ParallelEnv):
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
-        return Discrete(4)
+        return Box(0,1, shape=(2,))
 
     # Action space should be defined here.
     # If your spaces change over time, remove this line (disable caching).
