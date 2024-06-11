@@ -7,13 +7,13 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Mon 10 Jun 2024 02:47:46 AM IST
+#* Last Modified : Mon 10 Jun 2024 10:56:16 PM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
-import axelrod
+import  prisoners_dilemma as psd
 
-env = axelrod.env(render_mode="human")
+env = psd.env(render_mode="human")
 env.reset(seed=42)
 
 for agent in env.agent_iter():

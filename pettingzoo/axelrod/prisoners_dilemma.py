@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Mon 10 Jun 2024 03:54:40 AM IST
+#* Last Modified : Tue 11 Jun 2024 05:06:28 PM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -19,11 +19,14 @@ from gymnasium.spaces import Discrete, Box
 from pettingzoo import ParallelEnv
 from pettingzoo.utils import parallel_to_aec, wrappers
 
+import axelrod as axl
+
+
 
 COOPERATE = 0
 DEFECT = 1
 NONE = 2
-MOVES = ["COOPERATE", "DEFECT", "None"]
+MOVES = ["COOPERATE", "DEFECT", "NONE"]
 NUM_ITERS = 100
 REWARD_MAP = {
     (COOPERATE, COOPERATE): (1, 1),
@@ -37,6 +40,8 @@ REWARD_MAP = {
     (NONE, DEFECT): (0,0)
 }
 
+players = [s() for s in axl.demo_strategies]
+tournament = axl.Tournament(players, seed=1)
 #
 #Example Custom Parallel Environment
 #
@@ -86,7 +91,7 @@ class parallel_env(ParallelEnv):
 
         These attributes should not be changed after initialization.
         """
-        self.possible_agents = ["player_" + str(r) for r in range(5)]
+        self.possible_agents = ["player_" + str(r) for r in range(2)]
 
         # optional: a mapping between agent name and ID
         self.agent_name_mapping = dict(
