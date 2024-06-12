@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Wed 12 Jun 2024 01:15:13 AM IST
+#* Last Modified : Thu 13 Jun 2024 01:01:28 AM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -15,11 +15,14 @@ import functools
 import gymnasium
 import itertools as it
 import numpy as np
+import pygame
+import os.path as path
 
 from statistics import mean
 from easydict import EasyDict as edict
-from gymnasium.spaces import Discrete
+from gymnasium import spaces
 
+from pettingzoo.classic import chess
 from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector, wrappers
 
@@ -86,9 +89,9 @@ class TragedyCommonsEnv(AECEnv):
     The "name" metadata allows the environment to be pretty printed.
     """
 
-    metadata = {"render_modes": ["human"], "name": "tragedy_commons"}
+    metadata = {"render_modes": ["human", "rgb_array"], "name": "tragedy_commons"}
 
-    def __init__(self, render_mode=None, num_agents=NUM_AGENTS,
+    def __init__(self, render_mode=None, num_agents=NUM_AGENTS, screen_height=100,
                                             summarizer_func=mean):
         """
         The init method takes in environment arguments and
@@ -104,6 +107,7 @@ class TragedyCommonsEnv(AECEnv):
         """
         self.possible_agents = ["player_" + str(r) for r in range(num_agents)]
         self.summarizer_func = summarizer_func
+        self.board = chess.Board()
 
         # optional: a mapping between agent name and ID
         self.agent_name_mapping = dict(
@@ -111,14 +115,55 @@ class TragedyCommonsEnv(AECEnv):
         )
 
         # optional: we can define the observation and action spaces here as attributes to be used in their corresponding methods
-        self._action_spaces = {agent: Discrete(len(MOVES)) for agent in self.possible_agents}
-        self._observation_spaces = {
-            agent: Discrete(len(MOVES)) for agent in self.possible_agents
+        self._action_spaces = {agent: spaces.Discrete(len(MOVES)) for agent in self.possible_agents}
+        #self._observation_spaces = {
+        #    agent: spaces.Discrete(len(MOVES)) for agent in self.possible_agents
+        #}
+
+        self.agents = self.possible_agents[:]
+        self.observation_spaces = {
+            name: spaces.Dict(
+                {
+                    "observation": spaces.Box(
+                        low=0, high=1, shape=(8, 8, 111), dtype=bool
+                    ),
+                    "action_mask": spaces.Box(
+                        low=0, high=1, shape=(4672,), dtype=np.int8
+                    ),
+                }
+            )
+            for name in self.agents
         }
+        self.screen_height = self.screen_width = screen_height
+        self.screen = None
         self.idx = (agent for agent in self.possible_agents)
         self.possible_moves = list(it.product(MOVES.values(), repeat=NUM_AGENTS))
         self.reward_map = {rev_lookup_moves(move): reward_mapper_func(move) for move in self.possible_moves}
         self.render_mode = render_mode
+        if self.render_mode in ["human", "rgb_array"]:
+            self.BOARD_SIZE = (self.screen_width, self.screen_height)
+            self.clock = pygame.time.Clock()
+            self.cell_size = (self.BOARD_SIZE[0] / 8, self.BOARD_SIZE[1] / 8)
+
+            bg_name = path.join(path.dirname(__file__), "img/chessboard.png")
+            self.bg_image = pygame.transform.scale(
+                pygame.image.load(bg_name), self.BOARD_SIZE
+            )
+
+            def load_piece(file_name):
+                img_path = path.join(path.dirname(__file__), f"img/{file_name}.png")
+                return pygame.transform.scale(
+                    pygame.image.load(img_path), self.cell_size
+                )
+
+            self.piece_images = {
+                "pawn": [load_piece("pawn_black"), load_piece("pawn_white")],
+                "knight": [load_piece("knight_black"), load_piece("knight_white")],
+                "bishop": [load_piece("bishop_black"), load_piece("bishop_white")],
+                "rook": [load_piece("rook_black"), load_piece("rook_white")],
+                "queen": [load_piece("queen_black"), load_piece("queen_white")],
+                "king": [load_piece("king_black"), load_piece("king_white")],
+            }
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
@@ -126,33 +171,55 @@ class TragedyCommonsEnv(AECEnv):
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
-        return Discrete(4)
+        return spaces.Discrete(4)
 
     # Action space should be defined here.
     # If your spaces change over time, remove this line (disable caching).
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
-        return Discrete(3)
+        return spaces.Discrete(3)
 
     def render(self):
-        """
-        Renders the environment. In human mode, it can print to terminal, open
-        up a graphical window, or open up some other display that a human can see and understand.
-        """
         if self.render_mode is None:
             gymnasium.logger.warn(
                 "You are calling render method without specifying any render mode."
             )
-            return
-
-        if len(self.agents) == NUM_AGENTS:
-            string = "Current state: " + " ".join(["Agent{}: {}".format(num,
-                MOVES[self.state[self.agents[num]]]) for num in range(NUM_AGENTS)])
-
+        elif self.render_mode == "ansi":
+            return str(self.board)
+        elif self.render_mode in {"human", "rgb_array"}:
+            return self._render_gui()
         else:
-            string = "Game over"
-        print(string)
+            raise ValueError(
+                f"{self.render_mode} is not a valid render mode. Available modes are: {self.metadata['render_modes']}"
+            )
 
+    def _render_gui(self):
+        if self.screen is None:
+            pygame.init()
+
+            if self.render_mode == "human":
+                pygame.display.set_caption("Chess")
+                self.screen = pygame.display.set_mode(self.BOARD_SIZE)
+            elif self.render_mode == "rgb_array":
+                self.screen = pygame.Surface(self.BOARD_SIZE)
+
+        self.screen.blit(self.bg_image, (0, 0))
+        for square, piece in self.board.piece_map().items():
+            pos_x = square % 8 * self.cell_size[0]
+            pos_y = (
+                self.BOARD_SIZE[1] - (square // 8 + 1) * self.cell_size[1]
+            )  # offset because pygame display is flipped
+            piece_name = chess.piece_name(piece.piece_type)
+            piece_img = self.piece_images[piece_name][piece.color]
+            self.screen.blit(piece_img, (pos_x, pos_y))
+
+        if self.render_mode == "human":
+            pygame.display.update()
+            self.clock.tick(self.metadata["render_fps"])
+        elif self.render_mode == "rgb_array":
+            return np.transpose(
+                np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
+            )
     def observe(self, agent):
         """
         Observe should return the observation of the specified agent. This function
@@ -168,6 +235,9 @@ class TragedyCommonsEnv(AECEnv):
         or any other environment data which should not be kept around after the
         user is no longer using the environment.
         """
+        if self.screen is not None:
+            pygame.quit()
+            self.screen = None
         pass
 
     def reset(self, seed=None, options=None):
