@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Thu 13 Jun 2024 01:01:28 AM IST
+#* Last Modified : Thu 13 Jun 2024 10:04:41 PM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -25,6 +25,9 @@ from gymnasium import spaces
 from pettingzoo.classic import chess
 from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector, wrappers
+
+# Local/custom imports
+import board
 
 COOPERATE = 0
 DEFECT = 1
@@ -107,7 +110,7 @@ class TragedyCommonsEnv(AECEnv):
         """
         self.possible_agents = ["player_" + str(r) for r in range(num_agents)]
         self.summarizer_func = summarizer_func
-        self.board = chess.Board()
+        self.board = board.Board()
 
         # optional: a mapping between agent name and ID
         self.agent_name_mapping = dict(
