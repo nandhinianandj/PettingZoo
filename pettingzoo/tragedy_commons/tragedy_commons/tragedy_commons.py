@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Thu 13 Jun 2024 10:04:41 PM IST
+#* Last Modified : Fri 14 Jun 2024 01:59:46 AM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -50,6 +50,11 @@ def reward_mapper_func(iterable):
     cntr = Counter(iterable)
     return cntr.most_common()
 
+def global_cost_and_average(reward_val):
+    res = mean([ea[1] for ea in reward_val])
+    return {'reward': res,
+            'global': -1 * res
+            }
 def blind_average(reward_val):
     # Blind average reward returns to everyone without discrimination/punishpment for bad behaviour
     return mean([ea[1] for ea in reward_val])
@@ -72,7 +77,7 @@ def env(render_mode=None):
     """
     internal_render_mode = render_mode if render_mode != "ansi" else "human"
     env = TragedyCommonsEnv(render_mode=internal_render_mode, 
-                            summarizer_func=blind_average)
+                            summarizer_func=global_cost_and_average)
     # This wrapper is only for environments which print results to the terminal
     if render_mode == "ansi":
         env = wrappers.CaptureStdoutWrapper(env)
@@ -92,9 +97,13 @@ class TragedyCommonsEnv(AECEnv):
     The "name" metadata allows the environment to be pretty printed.
     """
 
-    metadata = {"render_modes": ["human", "rgb_array"], "name": "tragedy_commons"}
+    metadata = {
+                "render_modes": ["human", "rgb_array"], 
+                "name": "tragedy_commons",
+                "render_fps": 25
+                }
 
-    def __init__(self, render_mode=None, num_agents=NUM_AGENTS, screen_height=100,
+    def __init__(self, render_mode=None, num_agents=NUM_AGENTS, screen_height=1000,
                                             summarizer_func=mean):
         """
         The init method takes in environment arguments and
@@ -148,26 +157,21 @@ class TragedyCommonsEnv(AECEnv):
             self.clock = pygame.time.Clock()
             self.cell_size = (self.BOARD_SIZE[0] / 8, self.BOARD_SIZE[1] / 8)
 
-            bg_name = path.join(path.dirname(__file__), "img/chessboard.png")
+            bg_name = path.join(path.dirname(__file__), "img/ecosystem.png")
             self.bg_image = pygame.transform.scale(
                 pygame.image.load(bg_name), self.BOARD_SIZE
             )
 
-            def load_piece(file_name):
-                img_path = path.join(path.dirname(__file__), f"img/{file_name}.png")
-                return pygame.transform.scale(
-                    pygame.image.load(img_path), self.cell_size
-                )
+    def _accumulate_rewards(self):
+        print(self.rewards)
+        for agent,reward in self.rewards.items():
+            if isinstance(reward, dict):
+                self._cumulative_rewards[agent] += reward['reward']
+            else:
+                self._cumulative_rewards[agent] += reward
 
-            self.piece_images = {
-                "pawn": [load_piece("pawn_black"), load_piece("pawn_white")],
-                "knight": [load_piece("knight_black"), load_piece("knight_white")],
-                "bishop": [load_piece("bishop_black"), load_piece("bishop_white")],
-                "rook": [load_piece("rook_black"), load_piece("rook_white")],
-                "queen": [load_piece("queen_black"), load_piece("queen_white")],
-                "king": [load_piece("king_black"), load_piece("king_white")],
-            }
 
+        pass
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
     # If your spaces change over time, remove this line (disable caching).
@@ -207,14 +211,6 @@ class TragedyCommonsEnv(AECEnv):
                 self.screen = pygame.Surface(self.BOARD_SIZE)
 
         self.screen.blit(self.bg_image, (0, 0))
-        for square, piece in self.board.piece_map().items():
-            pos_x = square % 8 * self.cell_size[0]
-            pos_y = (
-                self.BOARD_SIZE[1] - (square // 8 + 1) * self.cell_size[1]
-            )  # offset because pygame display is flipped
-            piece_name = chess.piece_name(piece.piece_type)
-            piece_img = self.piece_images[piece_name][piece.color]
-            self.screen.blit(piece_img, (pos_x, pos_y))
 
         if self.render_mode == "human":
             pygame.display.update()
@@ -230,7 +226,8 @@ class TragedyCommonsEnv(AECEnv):
         at any time after reset() is called.
         """
         # observation of one agent is the previous state of the other
-        return np.array(self.observations[agent])
+        #return np.array(self.observations[agent])
+        return self.board.resources
 
     def close(self):
         """
@@ -321,6 +318,7 @@ class TragedyCommonsEnv(AECEnv):
                 self.observations[i] = self.state[
                     self.agents[1 - self.agent_name_mapping[i]]
                 ]
+            self.board.update_resources(self.rewards)
         else:
             # necessary so that observe() returns a reasonable observation at all times.
             self.state[self.agents[1 - self.agent_name_mapping[agent]]] = NONE
@@ -331,8 +329,9 @@ class TragedyCommonsEnv(AECEnv):
         self.agent_selection = self._agent_selector.next()
         # Adds .rewards to ._cumulative_rewards
         self._accumulate_rewards()
-
         if self.render_mode == "human":
             self.render()
 
+        if self.render_mode == "rgb_array":
+            self.render()
 #To interact with your custom AEC environment, use the following code:

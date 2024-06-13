@@ -1,5 +1,8 @@
+import numpy as np
+import seaborn as sns
+
 class Board:
-    def __init__(self):
+    def __init__(self, width=8, breadth=8):
         # internally self.board.squares holds a flat representation of tic tac toe board
         # where an empty board is [0, 0, 0, 0, 0, 0, 0, 0, 0]
         # where indexes are column wise order
@@ -10,48 +13,33 @@ class Board:
         # empty -- 0
         # player 0 -- 1
         # player 1 -- 2
-        self.squares = list(range(8)) * 8
-
-        # precommute possible winning combinations
-        #self.calculate_winners()
+        rng = np.random.default_rng(12345)
+        self.squares = list(range(width)) * breadth
+        self.resources =  np.array(rng.integers(low=0, high=2**8, size=64)).reshape(width, breadth)
+        plt = sns.heatmap(self.resources, annot=True)
+        plt.set(xticklabels=[])
+        plt.set(yticklabels=[])
+        #plt.tick_
+        fig = plt.get_figure()
+        fig.savefig("img/ecosystem.png")
+        fig.savefig("img/ecosystem_initial.png")
 
     #def setup(self):
+    #    pass
     #    self.calculate_winners()
 
-    def play_turn(self, agent, pos):
-        # if spot is empty
-        if self.squares[pos] != 0:
-            return
-        if agent == 0:
-            self.squares[pos] = 1
-        elif agent == 1:
-            self.squares[pos] = 2
-        return
+    def update_resources(self, rewards):
+        if 'global' in rewards:
+            self.resources += rewards['global']
+            print(self.resources)
+            plt = sns.heatmap(self.resources, annot=False)
+            plt.set(xticklabels=[])
+            plt.set(yticklabels=[])
+            #plt.tick_
+            fig = plt.get_figure()
+            fig.savefig("img/ecosystem.png")
+        pass
 
-    def calculate_winners(self):
-        winning_combinations = []
-        indices = [x for x in range(0, 9)]
-
-        # Vertical combinations
-        winning_combinations += [
-            tuple(indices[i : (i + 3)]) for i in range(0, len(indices), 3)
-        ]
-
-        # Horizontal combinations
-        winning_combinations += [
-            tuple(indices[x] for x in range(y, len(indices), 3)) for y in range(0, 3)
-        ]
-
-        # Diagonal combinations
-        winning_combinations.append(tuple(x for x in range(0, len(indices), 4)))
-        winning_combinations.append(tuple(x for x in range(2, len(indices) - 1, 2)))
-
-        self.winning_combinations = winning_combinations
-
-    # returns:
-    # -1 for no winner
-    # 1 -- agent 0 wins
-    # 2 -- agent 1 wins
     def check_for_winner(self):
         winner = -1
         for combination in self.winning_combinations:
@@ -64,7 +52,7 @@ class Board:
                 winner = 2
         return winner
 
-    def check_game_over(self):
+    def check_game_ove(self):
         winner = self.check_for_winner()
 
         if winner == -1 and all(square in [1, 2] for square in self.squares):
