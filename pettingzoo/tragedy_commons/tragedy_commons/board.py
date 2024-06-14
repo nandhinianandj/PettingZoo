@@ -13,10 +13,9 @@ class Board:
         # empty -- 0
         # player 0 -- 1
         # player 1 -- 2
-        rng = np.random.default_rng(12345)
         self.squares = list(range(width)) * breadth
-        self.resources =  np.array(rng.integers(low=0, high=2**8, size=64)).reshape(width, breadth)
-        plt = sns.heatmap(self.resources, annot=True)
+        self.resources =  np.array(np.random.randn(width, breadth))
+        plt = sns.heatmap(self.resources, annot=False)
         plt.set(xticklabels=[])
         plt.set(yticklabels=[])
         #plt.tick_
@@ -24,36 +23,23 @@ class Board:
         fig.savefig("img/ecosystem.png")
         fig.savefig("img/ecosystem_initial.png")
 
-    #def setup(self):
-    #    pass
-    #    self.calculate_winners()
-
     def update_resources(self, rewards):
-        if 'global' in rewards:
-            self.resources += rewards['global']
-            print(self.resources)
-            plt = sns.heatmap(self.resources, annot=False)
-            plt.set(xticklabels=[])
-            plt.set(yticklabels=[])
-            #plt.tick_
-            fig = plt.get_figure()
-            fig.savefig("img/ecosystem.png")
+        for player, reward in rewards.items():
+            if isinstance(reward, dict):
+                self.resources += reward['global']
+                self.resources[self.resources < 0] = 0
+                print(self.resources)
+                plt = sns.heatmap(self.resources, annot=False)
+                plt.set(xticklabels=[])
+                plt.set(yticklabels=[])
+                fig = plt.get_figure()
+                fig.savefig("img/ecosystem.png")
+            else:
+                continue
         pass
 
-    def check_for_winner(self):
-        winner = -1
-        for combination in self.winning_combinations:
-            states = []
-            for index in combination:
-                states.append(self.squares[index])
-            if all(x == 1 for x in states):
-                winner = 1
-            if all(x == 2 for x in states):
-                winner = 2
-        return winner
-
-    def check_game_ove(self):
-        winner = self.check_for_winner()
+    def check_game_over(self):
+        #winner = self.check_for_winner()
 
         if winner == -1 and all(square in [1, 2] for square in self.squares):
             # tie

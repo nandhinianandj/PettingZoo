@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Fri 14 Jun 2024 01:59:46 AM IST
+#* Last Modified : Sat 15 Jun 2024 12:55:54 AM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -36,7 +36,7 @@ MOVES = {COOPERATE: "COOPERATE",
          DEFECT: "DEFECT",
          NONE: "NONE"
          }
-NUM_ITERS = 100
+NUM_ITERS = 10
 NUM_AGENTS = 5
 
 def rev_lookup_moves(move):
@@ -137,7 +137,7 @@ class TragedyCommonsEnv(AECEnv):
             name: spaces.Dict(
                 {
                     "observation": spaces.Box(
-                        low=0, high=1, shape=(8, 8, 111), dtype=bool
+                        low=0, high=1, shape=(8, 8), dtype=bool
                     ),
                     "action_mask": spaces.Box(
                         low=0, high=1, shape=(4672,), dtype=np.int8
@@ -210,6 +210,10 @@ class TragedyCommonsEnv(AECEnv):
             elif self.render_mode == "rgb_array":
                 self.screen = pygame.Surface(self.BOARD_SIZE)
 
+        bg_name = path.join(path.dirname(__file__), "img/ecosystem.png")
+        self.bg_image = pygame.transform.scale(
+            pygame.image.load(bg_name), self.BOARD_SIZE
+        )
         self.screen.blit(self.bg_image, (0, 0))
 
         if self.render_mode == "human":
@@ -225,7 +229,7 @@ class TragedyCommonsEnv(AECEnv):
         should return a sane observation (though not necessarily the most up to date possible)
         at any time after reset() is called.
         """
-        # observation of one agent is the previous state of the other
+        # observation of one agent is the previous state of the otherbu
         #return np.array(self.observations[agent])
         return self.board.resources
 
@@ -318,7 +322,9 @@ class TragedyCommonsEnv(AECEnv):
                 self.observations[i] = self.state[
                     self.agents[1 - self.agent_name_mapping[i]]
                 ]
+
             self.board.update_resources(self.rewards)
+            self.screen.blit(self.bg_image, (0, 0))
         else:
             # necessary so that observe() returns a reasonable observation at all times.
             self.state[self.agents[1 - self.agent_name_mapping[agent]]] = NONE
