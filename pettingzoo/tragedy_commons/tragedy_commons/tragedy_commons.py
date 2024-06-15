@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Sat 15 Jun 2024 12:55:54 AM IST
+#* Last Modified : Sat 15 Jun 2024 11:56:54 AM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -37,7 +37,7 @@ MOVES = {COOPERATE: "COOPERATE",
          NONE: "NONE"
          }
 NUM_ITERS = 10
-NUM_AGENTS = 5
+NUM_AGENTS = 10
 
 def rev_lookup_moves(move):
     keys = list()
@@ -51,9 +51,16 @@ def reward_mapper_func(iterable):
     return cntr.most_common()
 
 def global_cost_and_average(reward_val):
-    res = mean([ea[1] for ea in reward_val])
+    #TODO: There's a lot more nuances to be explored here
+    #   For ex: Should we reward everyone equally or separately
+    #            Should we change the global penalty based on which action is max CO-OPERATE or DEFECT or NONE
+    import pdb; pdb.set_trace()
+    rewards = dict(reward_val)
+    res = rewards['COOPERATE']/len(MOVES)
+    if 'DEFECT':
+        global_res = -1 * res/(NUM_ITERS*NUM_AGENTS)
     return {'reward': res,
-            'global': -1 * res
+            'global': global_res
             }
 def blind_average(reward_val):
     # Blind average reward returns to everyone without discrimination/punishpment for bad behaviour
@@ -98,7 +105,7 @@ class TragedyCommonsEnv(AECEnv):
     """
 
     metadata = {
-                "render_modes": ["human", "rgb_array"], 
+                "render_modes": ["human", "rgb_array"],
                 "name": "tragedy_commons",
                 "render_fps": 25
                 }
