@@ -7,12 +7,14 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Wed 12 Jun 2024 02:51:56 AM IST
+#* Last Modified : Sat 15 Jun 2024 04:55:46 PM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
-import  tragedy_commons as tc
+import tragedy_commons as tc
+import axelrod as axl
 from pettingzoo.test import test_save_obs
+
 env = tc.env(render_mode="human")
 env.reset(seed=42)
 
