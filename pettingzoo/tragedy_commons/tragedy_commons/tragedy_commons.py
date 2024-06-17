@@ -7,7 +7,7 @@
 #
 #* Creation Date : 10-06-2024
 #
-#* Last Modified : Sat 15 Jun 2024 11:00:54 PM IST
+#* Last Modified : Mon 17 Jun 2024 07:42:30 PM IST
 #
 #* Created By : Yaay Nands
 #_._._._._._._._._._._._._._._._._._._._._.#
@@ -18,6 +18,7 @@ import itertools as it
 import numpy as np
 import pygame
 import os.path as path
+import random
 
 from statistics import mean
 from easydict import EasyDict as edict
@@ -37,7 +38,7 @@ MOVES = {COOPERATE: "COOPERATE",
          DEFECT: "DEFECT",
          NONE: "NONE"
          }
-NUM_ITERS = 100
+NUM_ITERS = 10
 NUM_AGENTS = 10
 
 def rev_lookup_moves(move):
@@ -126,7 +127,8 @@ class TragedyCommonsEnv(AECEnv):
         These attributes should not be changed after initialization.
         """
         print(axl.strategies)
-        self.possible_agents = ["player_" + str(r) for r in range(num_agents)]
+        self.possible_agents = {"player_" + str(r): axl.strategies[0]()
+                                        for r in range(num_agents) }
         self.summarizer_func = summarizer_func
         self.board = board.Board()
 
@@ -141,7 +143,7 @@ class TragedyCommonsEnv(AECEnv):
         #    agent: spaces.Discrete(len(MOVES)) for agent in self.possible_agents
         #}
 
-        self.agents = self.possible_agents[:]
+        self.agents = list(self.possible_agents.keys())
         self.observation_spaces = {
             name: spaces.Dict(
                 {
@@ -157,7 +159,7 @@ class TragedyCommonsEnv(AECEnv):
         }
         self.screen_height = self.screen_width = screen_height
         self.screen = None
-        self.idx = (agent for agent in self.possible_agents)
+        self.idx = (agent for agent in self.possible_agents.keys())
         self.possible_moves = list(it.product(MOVES.values(), repeat=NUM_AGENTS))
         self.reward_map = {rev_lookup_moves(move): reward_mapper_func(move) for move in self.possible_moves}
         self.render_mode = render_mode
@@ -266,7 +268,7 @@ class TragedyCommonsEnv(AECEnv):
         can be called without issues.
         Here it sets up the state dictionary which is used by step() and the observations dictionary which is used by step() and observe()
         """
-        self.agents = self.possible_agents[:]
+        self.agents = list(self.possible_agents.keys())
         self.rewards = {agent: 0 for agent in self.agents}
         self._cumulative_rewards = {agent: 0 for agent in self.agents}
         self.terminations = {agent: False for agent in self.agents}
